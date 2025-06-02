@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import {
   Table,
@@ -8,8 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { LeaderboardEntry } from "@/types/leaderboard";
-import { Crown, Medal, Trophy, Cherry, Gem, DollarSign, Star } from "lucide-react";
-import { SlotSpinner } from '@/components/ui/slot-spinner'; // Import the new spinner
+import { Crown, Medal, Trophy, Cherry, Gem, DollarSign, Star, type LucideProps } from "lucide-react";
+import { SlotSpinner } from '@/components/ui/slot-spinner';
 import { useEffect, useState } from 'react';
 
 interface LeaderboardTableProps {
@@ -24,19 +25,20 @@ const rankIcons = [
   <Trophy key="3" className="h-6 w-6 text-orange-400" />,
 ];
 
-const slotFlairIconsList = [
-  (props) => <Cherry {...props} className="h-4 w-4 text-red-500" />,
-  (props) => <Gem {...props} className="h-4 w-4 text-blue-400" />,
-  (props) => <DollarSign {...props} className="h-4 w-4 text-green-400" />,
-  (props) => <Star {...props} className="h-4 w-4 text-yellow-400" />,
+const slotFlairIconsList: React.FC<LucideProps>[] = [
+  (props: LucideProps) => <Cherry {...props} className="h-4 w-4 text-red-500" />,
+  (props: LucideProps) => <Gem {...props} className="h-4 w-4 text-blue-400" />,
+  (props: LucideProps) => <DollarSign {...props} className="h-4 w-4 text-green-400" />,
+  (props: LucideProps) => <Star {...props} className="h-4 w-4 text-yellow-400" />,
 ];
 
 const FlairIconDisplay = () => {
-  const [Icon, setIcon] = useState<React.FC | null>(null);
+  const [Icon, setIcon] = useState<React.FC<LucideProps> | null>(null);
 
   useEffect(() => {
     // Select icon only on client-side
-    setIcon(slotFlairIconsList[Math.floor(Math.random() * slotFlairIconsList.length)]);
+    const randomIndex = Math.floor(Math.random() * slotFlairIconsList.length);
+    setIcon(() => slotFlairIconsList[randomIndex]);
   }, []);
 
   if (!Icon) return <span className="h-4 w-4 inline-block" />; // Placeholder or empty span
@@ -107,3 +109,4 @@ export function LeaderboardTable({ data, isLoading, error }: LeaderboardTablePro
     </div>
   );
 }
+
