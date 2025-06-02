@@ -2,15 +2,14 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import type { LeaderboardEntry } from '@/types/leaderboard';
 
-// Cache variables for the API route
 let cachedData: LeaderboardEntry[] | null = null;
 let cacheTimestamp: number | null = null;
-const CACHE_DURATION_MS = 20 * 60 * 1000; // 20 minutes
+const CACHE_DURATION_MS = 20 * 1000; // 20 seconds
 
 interface RainbetAffiliate {
   username: string;
   id: string;
-  wagered_amount: string; // API returns this as a string
+  wagered_amount: string; 
 }
 
 interface RainbetApiResponse {
@@ -20,20 +19,12 @@ interface RainbetApiResponse {
 
 function getWeekDates(): { start_at: string; end_at: string } {
   const today = new Date();
-  
-  // end_at is today
   const end_at = today.toISOString().split('T')[0];
-
-  // Calculate start_at (most recent Monday)
   const startAtDate = new Date(today); 
-  const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
-  
-  // Adjust daysToSubtract: if today is Sunday (0), Monday was 6 days ago. Otherwise, it's (dayOfWeek - 1).
+  const dayOfWeek = today.getDay(); 
   let daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  
   startAtDate.setDate(today.getDate() - daysToSubtract);
   const start_at = startAtDate.toISOString().split('T')[0];
-
   return { start_at, end_at };
 }
 
@@ -42,7 +33,6 @@ async function fetchFromRainbetAPI(): Promise<LeaderboardEntry[]> {
   if (!apiKey) {
     const errMsg = "RAINBET_API_KEY is not configured on the server. Please check Vercel environment variables for your deployment.";
     console.error(errMsg);
-    // This error will be caught by the GET handler's try/catch
     throw new Error(errMsg);
   }
 
@@ -51,7 +41,7 @@ async function fetchFromRainbetAPI(): Promise<LeaderboardEntry[]> {
 
   try {
     console.log(`Fetching from Rainbet API: ${apiUrl.replace(apiKey, 'REDACTED_API_KEY')}`);
-    const response = await fetch(apiUrl, { next: { revalidate: 0 } }); // Ensure fresh fetch for this server-side operation if not using its own cache logic
+    const response = await fetch(apiUrl, { next: { revalidate: 0 } }); 
 
     if (!response.ok) {
       let errorBody = 'Could not retrieve error body.';
@@ -84,37 +74,36 @@ async function fetchFromRainbetAPI(): Promise<LeaderboardEntry[]> {
 
   } catch (error) {
     console.error("Error fetching or processing leaderboard data from Rainbet API:", error);
-    if (error instanceof Error && error.message.startsWith("Failed to fetch leaderboard data from Rainbet API")) {
-        throw error; // Re-throw specific Rainbet API errors
+    if (error instanceof Error && (error.message.startsWith("Failed to fetch leaderboard data from Rainbet API") || error.message.startsWith("RAINBET_API_KEY is not configured"))) {
+        throw error;
     }
-    if (error instanceof Error && error.message.startsWith("RAINBET_API_KEY is not configured")) {
-        throw error; // Re-throw specific API key configuration errors
-    }
-    // For other errors, wrap them
     throw new Error(`An unexpected error occurred while fetching or processing data from the external API: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 export async function GET(request: NextRequest) {
+  const forceRefresh = request.nextUrl.searchParams.get('force') === 'true';
   const now = Date.now();
-  // Check cache
-  if (cachedData && cacheTimestamp && (now - cacheTimestamp < CACHE_DURATION_MS)) {
-    console.log("Returning cached leaderboard data from API route");
+
+  if (!forceRefresh && cachedData && cacheTimestamp && (now - cacheTimestamp < CACHE_DURATION_MS)) {
+    console.log("Returning cached leaderboard data from API route (cache valid for 20s)");
     return NextResponse.json(cachedData);
   }
 
-  console.log("Fetching fresh leaderboard data via API route (cache expired or not present)");
+  if (forceRefresh) {
+    console.log("Force refresh triggered for leaderboard data from API route.");
+  } else {
+    console.log("Fetching fresh leaderboard data via API route (cache expired or not present, or 20s duration passed).");
+  }
+  
   try {
     const data = await fetchFromRainbetAPI();
-    // Update cache
     cachedData = data;
     cacheTimestamp = now;
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error in API route GET handler:", error);
-    // Ensure a user-friendly message is sent to the client
     const message = error instanceof Error ? error.message : "An unknown server error occurred while fetching leaderboard data.";
-    // Avoid exposing too many details in client-facing error if it's a generic "unknown" error
     const clientErrorMessage = message.includes("RAINBET_API_KEY") || message.includes("Rainbet API") 
         ? message 
         : "A server error occurred while trying to retrieve leaderboard data.";

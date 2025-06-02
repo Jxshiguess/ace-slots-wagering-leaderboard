@@ -16,17 +16,15 @@ export default function LeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchLeaderboardData();
-      // Simulate loading time for spinner visibility
-      // await new Promise(resolve => setTimeout(resolve, 1500)); 
+      const data = await fetchLeaderboardData(forceRefresh);
       setLeaderboardData(data);
       if (data.length > 0) {
         toast({
-          title: "Leaderboard Loaded!",
+          title: forceRefresh ? "Leaderboard Refreshed!" : "Leaderboard Loaded!",
           description: "The latest high rollers are here.",
           variant: "default",
         });
@@ -39,7 +37,7 @@ export default function LeaderboardPage() {
         description: errorMessage,
         variant: "destructive",
       });
-      setLeaderboardData([]); // Clear data on error
+      setLeaderboardData([]); 
     } finally {
       setIsLoading(false);
     }
@@ -50,7 +48,7 @@ export default function LeaderboardPage() {
   }, [loadData]);
 
   const handleRefresh = () => {
-    loadData();
+    loadData(true); // Pass true to force refresh
   };
 
   const handleClear = () => {
