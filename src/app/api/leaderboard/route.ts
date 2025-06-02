@@ -40,23 +40,36 @@ function getWeekDates(): { start_at: string; end_at: string } {
 async function fetchFromRainbetAPI(): Promise<LeaderboardEntry[]> {
   const apiKey = process.env.RAINBET_API_KEY;
   if (!apiKey) {
-    console.error("RAINBET_API_KEY is not configured on the server.");
-    // Do not expose details about the key in the error message to the client
-    throw new Error("Server configuration error related to external API access.");
+    const errMsg = "RAINBET_API_KEY is not configured on the server. Please check Vercel environment variables for your deployment.";
+    console.error(errMsg);
+    // This error will be caught by the GET handler's try/catch
+    throw new Error(errMsg);
   }
 
   const { start_at, end_at } = getWeekDates();
   const apiUrl = `https://services.rainbet.com/v1/external/affiliates?key=${apiKey}&start_at=${start_at}&end_at=${end_at}`;
 
   try {
-    const response = await fetch(apiUrl, { next: { revalidate: 0 } }); // Ensure fresh fetch for API route if not using its own cache logic
+    console.log(`Fetching from Rainbet API: ${apiUrl.replace(apiKey, 'REDACTED_API_KEY')}`);
+    const response = await fetch(apiUrl, { next: { revalidate: 0 } }); // Ensure fresh fetch for this server-side operation if not using its own cache logic
+
     if (!response.ok) {
-      const errorBody = await response.text();
+      let errorBody = 'Could not retrieve error body.';
+      try {
+        errorBody = await response.text();
+      } catch (e) {
+        console.error("Failed to parse error body from Rainbet API", e);
+      }
       console.error(`Rainbet API request failed with status ${response.status}: ${errorBody}`);
-      throw new Error(`Failed to fetch leaderboard data from Rainbet API: ${response.statusText}`);
+      throw new Error(`Failed to fetch leaderboard data from Rainbet API. Status: ${response.statusText}. Body: ${errorBody.substring(0, 100)}`);
     }
 
     const apiResponse = (await response.json()) as RainbetApiResponse;
+
+    if (!apiResponse || !Array.isArray(apiResponse.affiliates)) {
+      console.error("Unexpected response structure from Rainbet API:", apiResponse);
+      throw new Error("Received unexpected data structure from Rainbet API.");
+    }
 
     const transformedData: LeaderboardEntry[] = apiResponse.affiliates.map(affiliate => ({
       id: affiliate.id,
@@ -66,14 +79,19 @@ async function fetchFromRainbetAPI(): Promise<LeaderboardEntry[]> {
     }));
 
     transformedData.sort((a, b) => b.wagerAmount - a.wagerAmount);
+    console.log(`Successfully fetched and transformed ${transformedData.length} entries from Rainbet API.`);
     return transformedData;
 
   } catch (error) {
     console.error("Error fetching or processing leaderboard data from Rainbet API:", error);
     if (error instanceof Error && error.message.startsWith("Failed to fetch leaderboard data from Rainbet API")) {
-        throw error;
+        throw error; // Re-throw specific Rainbet API errors
     }
-    throw new Error("An error occurred while fetching leaderboard data from the external API.");
+    if (error instanceof Error && error.message.startsWith("RAINBET_API_KEY is not configured")) {
+        throw error; // Re-throw specific API key configuration errors
+    }
+    // For other errors, wrap them
+    throw new Error(`An unexpected error occurred while fetching or processing data from the external API: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -94,7 +112,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error in API route GET handler:", error);
-    const message = error instanceof Error ? error.message : "Unknown server error occurred while fetching leaderboard data.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Ensure a user-friendly message is sent to the client
+    const message = error instanceof Error ? error.message : "An unknown server error occurred while fetching leaderboard data.";
+    // Avoid exposing too many details in client-facing error if it's a generic "unknown" error
+    const clientErrorMessage = message.includes("RAINBET_API_KEY") || message.includes("Rainbet API") 
+        ? message 
+        : "A server error occurred while trying to retrieve leaderboard data.";
+    return NextResponse.json({ error: clientErrorMessage }, { status: 500 });
   }
 }
