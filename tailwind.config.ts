@@ -88,16 +88,15 @@ export default {
             height: '0',
           },
         },
-        'spin-slot': {
-          '0%': { transform: 'translateY(-20%)', opacity: '0' },
-          '20%, 80%': { transform: 'translateY(0)', opacity: '1' },
-          '100%': { transform: 'translateY(20%)', opacity: '0'},
+        'slot-reel-spin': {
+          '0%': { transform: 'translateY(0%)' },
+          '100%': { transform: 'translateY(-50%)' }, // Assumes a duplicated list of symbols for continuous scroll illusion
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'spin-slot': 'spin-slot 0.5s ease-in-out',
+        'slot-reel-spin': 'slot-reel-spin 0.3s linear infinite',
       },
     },
   },

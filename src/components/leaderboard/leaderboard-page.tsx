@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,12 +21,16 @@ export default function LeaderboardPage() {
     setError(null);
     try {
       const data = await fetchLeaderboardData();
+      // Simulate loading time for spinner visibility
+      // await new Promise(resolve => setTimeout(resolve, 1500)); 
       setLeaderboardData(data);
-      toast({
-        title: "Leaderboard Updated",
-        description: "Fresh data has been loaded!",
-        variant: "default",
-      });
+      if (data.length > 0) {
+        toast({
+          title: "Leaderboard Loaded!",
+          description: "The latest high rollers are here.",
+          variant: "default",
+        });
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
       setError(errorMessage);
@@ -50,7 +55,7 @@ export default function LeaderboardPage() {
 
   const handleClear = () => {
     setLeaderboardData([]);
-    setError(null); // Clear any existing errors
+    setError(null); 
     toast({
       title: "Display Cleared",
       description: "Leaderboard display has been cleared. Refresh to load new data.",
@@ -59,11 +64,11 @@ export default function LeaderboardPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 min-h-screen flex flex-col items-center justify-start">
-      <Card className="w-full max-w-3xl shadow-2xl border-2 border-primary/30 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
+      <Card className="w-full max-w-3xl shadow-2xl border-4 border-primary/60 bg-card/90 backdrop-blur-md rounded-xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-b from-primary/30 to-primary/10 p-0">
           <LeaderboardHeader />
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <LeaderboardActions 
             onRefresh={handleRefresh} 
             onClear={handleClear} 

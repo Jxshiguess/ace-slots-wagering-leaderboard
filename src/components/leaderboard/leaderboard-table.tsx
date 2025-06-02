@@ -7,9 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { LeaderboardEntry } from "@/types/leaderboard";
-import { Crown, Cherry, Gem, DollarSign, Trophy, Medal, Star } from "lucide-react";
+import { Crown, Medal, Trophy, Cherry, Gem, DollarSign, Star } from "lucide-react";
+import { SlotSpinner } from '@/components/ui/slot-spinner'; // Import the new spinner
+import { useEffect, useState } from 'react';
 
 interface LeaderboardTableProps {
   data: LeaderboardEntry[];
@@ -18,39 +19,35 @@ interface LeaderboardTableProps {
 }
 
 const rankIcons = [
-  <Crown key="1" className="h-5 w-5 text-yellow-400" />,
-  <Medal key="2" className="h-5 w-5 text-slate-400" />,
-  <Trophy key="3" className="h-5 w-5 text-yellow-600" />,
+  <Crown key="1" className="h-6 w-6 text-yellow-400" />,
+  <Medal key="2" className="h-6 w-6 text-slate-300" />,
+  <Trophy key="3" className="h-6 w-6 text-orange-400" />,
 ];
 
-const slotFlairIcons = [
-  <Cherry key="cherry" className="h-4 w-4 text-red-500" />,
-  <Gem key="gem" className="h-4 w-4 text-blue-500" />,
-  <DollarSign key="dollar" className="h-4 w-4 text-green-500" />,
-  <Star key="star" className="h-4 w-4 text-yellow-500" />,
+const slotFlairIconsList = [
+  (props) => <Cherry {...props} className="h-4 w-4 text-red-500" />,
+  (props) => <Gem {...props} className="h-4 w-4 text-blue-400" />,
+  (props) => <DollarSign {...props} className="h-4 w-4 text-green-400" />,
+  (props) => <Star {...props} className="h-4 w-4 text-yellow-400" />,
 ];
 
-function getRandomFlairIcon() {
-  return slotFlairIcons[Math.floor(Math.random() * slotFlairIcons.length)];
+const FlairIconDisplay = () => {
+  const [Icon, setIcon] = useState<React.FC | null>(null);
+
+  useEffect(() => {
+    // Select icon only on client-side
+    setIcon(slotFlairIconsList[Math.floor(Math.random() * slotFlairIconsList.length)]);
+  }, []);
+
+  if (!Icon) return <span className="h-4 w-4 inline-block" />; // Placeholder or empty span
+  return <Icon />;
 }
 
 
 export function LeaderboardTable({ data, isLoading, error }: LeaderboardTableProps) {
   if (isLoading && !data.length) {
-    return (
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-center space-x-4 p-4 bg-card-foreground/5 rounded-lg">
-            <Skeleton className="h-10 w-10 rounded-full bg-muted/20" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-3/4 bg-muted/20" />
-              <Skeleton className="h-4 w-1/2 bg-muted/20" />
-            </div>
-            <Skeleton className="h-6 w-12 bg-muted/20" />
-          </div>
-        ))}
-      </div>
-    );
+    // Use the SlotSpinner component when loading
+    return <SlotSpinner isLoading={true} />;
   }
 
   if (error) {
@@ -62,40 +59,45 @@ export function LeaderboardTable({ data, isLoading, error }: LeaderboardTablePro
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border shadow-lg">
+    <div className="overflow-x-auto rounded-lg border-2 border-primary/50 shadow-2xl bg-card/70 backdrop-blur-sm">
       <Table className="min-w-full">
-        <TableHeader className="bg-primary/10">
-          <TableRow>
-            <TableHead className="w-[80px] text-center font-headline text-primary-foreground/80">Rank</TableHead>
-            <TableHead className="font-headline text-primary-foreground/80">Username</TableHead>
-            <TableHead className="text-right font-headline text-primary-foreground/80">Wager Amount</TableHead>
+        <TableHeader className="bg-primary/20">
+          <TableRow className="border-b-2 border-primary/50">
+            <TableHead className="w-[80px] text-center font-headline text-lg text-primary-foreground/90 py-3">Rank</TableHead>
+            <TableHead className="font-headline text-lg text-primary-foreground/90 py-3">Username</TableHead>
+            <TableHead className="text-right font-headline text-lg text-primary-foreground/90 py-3 pr-6">Wager Amount</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((entry, index) => (
-            <TableRow key={entry.id} className={`transition-opacity duration-500 ease-in-out hover:bg-accent/10 ${isLoading ? 'opacity-50 animate-pulse' : 'opacity-100'}`}>
-              <TableCell className="text-center font-medium text-lg">
+            <TableRow 
+              key={entry.id} 
+              className={`border-b border-primary/20 transition-opacity duration-500 ease-in-out hover:bg-accent/20 ${isLoading ? 'opacity-50 animate-pulse' : 'opacity-100'}`}
+            >
+              <TableCell className="text-center font-bold text-xl py-4">
                 <div className="flex items-center justify-center space-x-2">
                   {rankIcons[index] || <span className="text-foreground/80">{index + 1}</span>}
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-4">
                 <div className="flex items-center space-x-3">
                   <Image
                     src={entry.avatar || `https://placehold.co/40x40.png?text=${entry.username.substring(0,2).toUpperCase()}`}
                     alt={`${entry.username}'s avatar`}
                     width={40}
                     height={40}
-                    className="rounded-full border-2 border-accent/50"
+                    className="rounded-full border-2 border-accent/70 shadow-md"
                     data-ai-hint="player avatar"
                   />
-                  <span className="font-medium text-foreground">{entry.username}</span>
-                  <span className="opacity-70">{getRandomFlairIcon()}</span>
+                  <span className="font-medium text-foreground text-base">{entry.username}</span>
+                  <span className="opacity-80 ml-1">
+                    <FlairIconDisplay />
+                  </span>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
-                <span className="font-bold text-accent text-lg">
-                  ${entry.wagerAmount.toLocaleString()}
+              <TableCell className="text-right py-4 pr-6">
+                <span className="font-bold text-accent text-lg tracking-wider">
+                  ${entry.wagerAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </TableCell>
             </TableRow>
