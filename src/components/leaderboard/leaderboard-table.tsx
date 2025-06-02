@@ -25,11 +25,17 @@ const rankIcons = [
   <Trophy key="3" className="h-6 w-6 text-orange-400" />,
 ];
 
-const slotFlairIconsList: React.FC<LucideProps>[] = [
-  (props: LucideProps) => <Cherry {...props} className="h-4 w-4 text-red-500" />,
-  (props: LucideProps) => <Gem {...props} className="h-4 w-4 text-blue-400" />,
-  (props: LucideProps) => <DollarSign {...props} className="h-4 w-4 text-green-400" />,
-  (props: LucideProps) => <Star {...props} className="h-4 w-4 text-yellow-400" />,
+// Explicitly define flair icon components
+const FlairCherryIcon: React.FC<LucideProps> = (props) => <Cherry {...props} className="h-4 w-4 text-red-500" />;
+const FlairGemIcon: React.FC<LucideProps> = (props) => <Gem {...props} className="h-4 w-4 text-blue-400" />;
+const FlairDollarSignIcon: React.FC<LucideProps> = (props) => <DollarSign {...props} className="h-4 w-4 text-green-400" />;
+const FlairStarIcon: React.FC<LucideProps> = (props) => <Star {...props} className="h-4 w-4 text-yellow-400" />;
+
+const slotFlairIconsListComponent: React.FC<LucideProps>[] = [
+  FlairCherryIcon,
+  FlairGemIcon,
+  FlairDollarSignIcon,
+  FlairStarIcon,
 ];
 
 const FlairIconDisplay = () => {
@@ -37,8 +43,8 @@ const FlairIconDisplay = () => {
 
   useEffect(() => {
     // Select icon only on client-side
-    const randomIndex = Math.floor(Math.random() * slotFlairIconsList.length);
-    setIcon(() => slotFlairIconsList[randomIndex]);
+    const randomIndex = Math.floor(Math.random() * slotFlairIconsListComponent.length);
+    setIcon(() => slotFlairIconsListComponent[randomIndex]); 
   }, []);
 
   if (!Icon) return <span className="h-4 w-4 inline-block" />; // Placeholder or empty span
@@ -109,4 +115,3 @@ export function LeaderboardTable({ data, isLoading, error }: LeaderboardTablePro
     </div>
   );
 }
-

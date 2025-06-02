@@ -1,15 +1,23 @@
 
-import { Cherry, Gem, DollarSign, Star, Bell, Zap, LucideProps } from 'lucide-react';
+import { Cherry, Gem, DollarSign, Star, Bell, Zap, type LucideProps } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
-const ALL_SYMBOLS: React.FC<LucideProps>[] = [
-  (props) => <Cherry {...props} color="hsl(var(--destructive))" />,
-  (props) => <Gem {...props} color="hsl(var(--primary))" />,
-  (props) => <DollarSign {...props} color="#4ade80" />, // Green
-  (props) => <Star {...props} color="#facc15" />, // Yellow
-  (props) => <Bell {...props} color="hsl(var(--accent))" />,
-  (props) => <Zap {...props} color="#f97316" />, // Orange
+// Explicitly define icon components
+const CherryIconComponent: React.FC<LucideProps> = (props) => <Cherry {...props} color="hsl(var(--destructive))" />;
+const GemIconComponent: React.FC<LucideProps> = (props) => <Gem {...props} color="hsl(var(--primary))" />;
+const DollarSignIconComponent: React.FC<LucideProps> = (props) => <DollarSign {...props} color="#4ade80" />;
+const StarIconComponent: React.FC<LucideProps> = (props) => <Star {...props} color="#facc15" />;
+const BellIconComponent: React.FC<LucideProps> = (props) => <Bell {...props} color="hsl(var(--accent))" />;
+const ZapIconComponent: React.FC<LucideProps> = (props) => <Zap {...props} color="#f97316" />;
+
+const ALL_SYMBOLS_COMPONENTS: React.FC<LucideProps>[] = [
+  CherryIconComponent,
+  GemIconComponent,
+  DollarSignIconComponent,
+  StarIconComponent,
+  BellIconComponent,
+  ZapIconComponent,
 ];
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -63,14 +71,12 @@ export function SlotSpinner({ isLoading }: { isLoading: boolean }) {
   if (!isLoading) return null;
 
   const reelsData = [
-    { symbols: ALL_SYMBOLS, duration: '0.4s', id: '1' },
-    { symbols: ALL_SYMBOLS, duration: '0.5s', id: '2' },
-    { symbols: ALL_SYMBOLS, duration: '0.3s', id: '3' },
+    { symbols: ALL_SYMBOLS_COMPONENTS, duration: '0.4s', id: '1' },
+    { symbols: ALL_SYMBOLS_COMPONENTS, duration: '0.5s', id: '2' },
+    { symbols: ALL_SYMBOLS_COMPONENTS, duration: '0.3s', id: '3' },
   ];
 
   // Generate unique keyframe animations for each reel to ensure they can have different symbol orders
-  // This is a bit of a hack due to Tailwind's static nature of animations
-  // A more robust solution might involve dynamic style tags or more complex JS-driven animation
   const keyframesStyle = reelsData.map(reel => `
     @keyframes slot-reel-spin-${reel.id} {
       0% { transform: translateY(0%); }
