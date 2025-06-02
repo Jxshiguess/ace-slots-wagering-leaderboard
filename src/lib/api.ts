@@ -1,39 +1,56 @@
+
 import type { LeaderboardEntry } from '@/types/leaderboard';
+import { db } from './firebase'; // Import Firestore instance
+import { collection, query, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
 
-// Mock fetch function
 export async function fetchLeaderboardData(): Promise<LeaderboardEntry[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+  try {
+    const leaderboardCol = collection(db, 'leaderboard');
+    // Order by wagerAmount descending, limit to 15 entries (configurable)
+    const q = query(leaderboardCol, orderBy('wagerAmount', 'desc'), limit(15));
 
-  // Simulate potential API error
-  // if (Math.random() > 0.8) {
-  //   throw new Error("Failed to fetch leaderboard data. Please try again!");
-  // }
+    const querySnapshot = await getDocs(q);
+    const data: LeaderboardEntry[] = [];
 
-  const sampleUsernames = [
-    "PlayerOne", "HighRoller", "LuckyLucy", "JackpotJoe", "AcePlayer", 
-    "SpinnerMaster", "BettingKing", "WagerQueen", "SlotSlayer", "ReelDeal",
-    "GoldMiner", "CoinCollector", "BonusHunter", "RiskTaker", "VegasViper"
-  ];
-
-  const data: LeaderboardEntry[] = [];
-  const numEntries = 10 + Math.floor(Math.random() * 6); // 10 to 15 entries
-
-  for (let i = 0; i < numEntries; i++) {
-    const usernameIndex = Math.floor(Math.random() * sampleUsernames.length);
-    const username = sampleUsernames[usernameIndex] + (Math.random() > 0.7 ? Math.floor(Math.random() * 100) : '');
-    // Ensure unique usernames for this batch roughly
-    if (data.find(d => d.username === username) && i < sampleUsernames.length) {
-        sampleUsernames.splice(usernameIndex, 1); // Avoid reusing directly if possible
-    }
-
-    data.push({
-      id: (i + 1).toString(),
-      username: username,
-      wagerAmount: Math.floor(Math.random() * 20000) + 1000, // Wagers between 1000 and 21000
-      avatar: `https://placehold.co/40x40.png?text=${username.substring(0,2).toUpperCase()}`
+    querySnapshot.forEach((doc) => {
+      const docData = doc.data();
+      data.push({
+        id: doc.id,
+        username: docData.username as string,
+        wagerAmount: docData.wagerAmount as number,
+        // Use stored avatar if available, otherwise generate placeholder
+        avatar: docData.avatar || `https://placehold.co/40x40.png?text=${(docData.username as string).substring(0,2).toUpperCase()}`
+      });
     });
+    
+    return data;
+
+  } catch (error) {
+    console.error("Error fetching leaderboard data from Firestore:", error);
+    if (error instanceof Error) {
+        throw new Error(`Failed to fetch leaderboard data from Firestore: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred while fetching leaderboard data from Firestore.");
   }
-  
-  return data.sort((a, b) => b.wagerAmount - a.wagerAmount);
+}
+
+// Optional: Function to add a new leaderboard entry
+// You can call this function from your application logic where new scores are generated.
+export async function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id' | 'avatar'> & { avatar?: string }): Promise<string> {
+  try {
+    const leaderboardCol = collection(db, 'leaderboard');
+    // Ensure avatar is either provided or defaults to a placeholder logic if needed before saving
+    // For simplicity, this example assumes avatar URL is provided or handled elsewhere if needed
+    const docRef = await addDoc(leaderboardCol, {
+      ...entry,
+      avatar: entry.avatar || `https://placehold.co/40x40.png?text=${entry.username.substring(0,2).toUpperCase()}`
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding leaderboard entry to Firestore:", error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to add leaderboard entry: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred while adding leaderboard entry.");
+  }
 }
