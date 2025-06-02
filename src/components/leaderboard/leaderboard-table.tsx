@@ -25,7 +25,6 @@ const rankIcons = [
   <Trophy key="3" className="h-6 w-6 text-orange-400" />,
 ];
 
-// Explicitly define flair icon components
 const FlairCherryIcon: React.FC<LucideProps> = (props) => <Cherry {...props} className="h-4 w-4 text-red-500" />;
 const FlairGemIcon: React.FC<LucideProps> = (props) => <Gem {...props} className="h-4 w-4 text-blue-400" />;
 const FlairDollarSignIcon: React.FC<LucideProps> = (props) => <DollarSign {...props} className="h-4 w-4 text-green-400" />;
@@ -39,22 +38,27 @@ const slotFlairIconsListComponent: React.FC<LucideProps>[] = [
 ];
 
 const FlairIconDisplay = () => {
-  const [Icon, setIcon] = useState<React.FC<LucideProps> | null>(null);
+  const [iconIndex, setIconIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    // Select icon only on client-side
     const randomIndex = Math.floor(Math.random() * slotFlairIconsListComponent.length);
-    setIcon(() => slotFlairIconsListComponent[randomIndex]); 
+    setIconIndex(randomIndex);
   }, []);
 
-  if (!Icon) return <span className="h-4 w-4 inline-block" />; // Placeholder or empty span
-  return <Icon />;
+  if (iconIndex === null) {
+    return <span className="h-4 w-4 inline-block" />; 
+  }
+
+  const IconToRender = slotFlairIconsListComponent[iconIndex];
+  if (!IconToRender) {
+     return <span className="h-4 w-4 inline-block" />; // Fallback if index is out of bounds somehow
+  }
+  return <IconToRender />;
 }
 
 
 export function LeaderboardTable({ data, isLoading, error }: LeaderboardTableProps) {
   if (isLoading && !data.length) {
-    // Use the SlotSpinner component when loading
     return <SlotSpinner isLoading={true} />;
   }
 

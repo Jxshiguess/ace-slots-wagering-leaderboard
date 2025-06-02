@@ -1,9 +1,7 @@
 
 import { Cherry, Gem, DollarSign, Star, Bell, Zap, type LucideProps } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
-// Explicitly define icon components
 const CherryIconComponent: React.FC<LucideProps> = (props) => <Cherry {...props} color="hsl(var(--destructive))" />;
 const GemIconComponent: React.FC<LucideProps> = (props) => <Gem {...props} color="hsl(var(--primary))" />;
 const DollarSignIconComponent: React.FC<LucideProps> = (props) => <DollarSign {...props} color="#4ade80" />;
@@ -30,25 +28,28 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 interface ReelProps {
-  initialSymbols: React.FC<LucideProps>[];
+  // Pass the list of component functions directly
+  availableSymbols: React.FC<LucideProps>[];
   duration: string;
   reelId: string;
 }
 
-const Reel: React.FC<ReelProps> = ({ initialSymbols, duration, reelId }) => {
-  const [symbols, setSymbols] = useState<React.FC<LucideProps>[]>([]);
+const Reel: React.FC<ReelProps> = ({ availableSymbols, duration, reelId }) => {
+  // Store shuffled indices referring to the availableSymbols array
+  const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
 
   useEffect(() => {
-    // Shuffle symbols on client-side to avoid hydration mismatch
-    setSymbols(shuffleArray(initialSymbols));
-  }, [initialSymbols]);
+    // Create an array of indices [0, 1, 2, ...]
+    const indices = availableSymbols.map((_, i) => i);
+    setShuffledIndices(shuffleArray(indices));
+  }, [availableSymbols]);
 
-  if (symbols.length === 0) {
-    // Render a placeholder or nothing until symbols are shuffled
+  if (shuffledIndices.length === 0) {
     return <div className="h-20 w-20 bg-muted/10 rounded-lg shadow-inner" />;
   }
   
-  const extendedSymbols = [...symbols, ...symbols]; // Duplicate for smooth looping
+  // Duplicate indices for smooth looping
+  const extendedIndices = [...shuffledIndices, ...shuffledIndices]; 
 
   return (
     <div className="h-20 w-20 overflow-hidden bg-card rounded-lg shadow-inner border border-primary/30 flex items-center justify-center relative">
@@ -56,11 +57,16 @@ const Reel: React.FC<ReelProps> = ({ initialSymbols, duration, reelId }) => {
         className="flex flex-col animate-slot-reel-spin"
         style={{ animationDuration: duration, animationName: `slot-reel-spin-${reelId}` }}
       >
-        {extendedSymbols.map((SymbolComponent, i) => (
-          <div key={i} className="h-20 w-20 flex shrink-0 items-center justify-center">
-            <SymbolComponent className="h-10 w-10" />
-          </div>
-        ))}
+        {extendedIndices.map((symbolIndex, i) => {
+          // Get the component function from the original array using the index
+          const SymbolComponent = availableSymbols[symbolIndex];
+          if (!SymbolComponent) return null; // Should not happen if indices are correct
+          return (
+            <div key={`${reelId}-${i}-${symbolIndex}`} className="h-20 w-20 flex shrink-0 items-center justify-center">
+              <SymbolComponent className="h-10 w-10" />
+            </div>
+          );
+        })}
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-card/80 via-transparent to-card/80 pointer-events-none" />
     </div>
@@ -71,12 +77,11 @@ export function SlotSpinner({ isLoading }: { isLoading: boolean }) {
   if (!isLoading) return null;
 
   const reelsData = [
-    { symbols: ALL_SYMBOLS_COMPONENTS, duration: '0.4s', id: '1' },
-    { symbols: ALL_SYMBOLS_COMPONENTS, duration: '0.5s', id: '2' },
-    { symbols: ALL_SYMBOLS_COMPONENTS, duration: '0.3s', id: '3' },
+    { duration: '0.4s', id: '1' },
+    { duration: '0.5s', id: '2' },
+    { duration: '0.3s', id: '3' },
   ];
 
-  // Generate unique keyframe animations for each reel to ensure they can have different symbol orders
   const keyframesStyle = reelsData.map(reel => `
     @keyframes slot-reel-spin-${reel.id} {
       0% { transform: translateY(0%); }
@@ -90,7 +95,12 @@ export function SlotSpinner({ isLoading }: { isLoading: boolean }) {
       <style>{keyframesStyle}</style>
       <div className="flex justify-center items-center space-x-3 sm:space-x-4 py-10" aria-busy="true" aria-live="polite">
         {reelsData.map((reel, index) => (
-          <Reel key={index} initialSymbols={reel.symbols} duration={reel.duration} reelId={reel.id} />
+          <Reel 
+            key={index} 
+            availableSymbols={ALL_SYMBOLS_COMPONENTS} 
+            duration={reel.duration} 
+            reelId={reel.id} 
+          />
         ))}
       </div>
     </>
